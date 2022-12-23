@@ -2,5 +2,5 @@
 
 # Installation
 
-    devtools::install_github("nil")
+    devtools::install_github("stasvlasov/inlist")
 
