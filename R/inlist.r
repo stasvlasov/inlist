@@ -9,7 +9,6 @@
 ##' @export 
 inlist <- function(l, extractor, selector) {
     sys_call <- as.list(sys.call())
-    print(sys_call)
     parent_frame <- parent.frame()
     ## eval in elements envir
     .eval <- \(envir, index, expr, call, fallback, .l = l, n = index) {
@@ -41,9 +40,7 @@ inlist <- function(l, extractor, selector) {
              , n = if(is.null(..n)) seq_along(.l) else ..n
              , SIMPLIFY = simplify)
     }
-    lapply
     sys_call <- sys.call()
-    print(sys_call)
     ## filter
     extractor <- sys_call[[3]]
     extract_l <- .apply(l, extractor, call = isTRUE, fallback = FALSE, simplify = TRUE)
