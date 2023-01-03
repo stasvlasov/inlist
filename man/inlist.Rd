@@ -2,20 +2,22 @@
 % Please edit documentation in R/inlist.r
 \name{inlist}
 \alias{inlist}
-\title{Presumably more convinient version of 'apply' for lists with table like structure.}
+\title{Presumably more convenient version of 'apply' for lists with table like structure.}
 \usage{
-inlist(l, extractor, selector)
+inlist(l, extractor, applicator, fallback)
 }
 \arguments{
-\item{l}{list}
+\item{l}{list (or NULL)}
 
-\item{extractor}{Predicate to filter list elements before applying.}
+\item{extractor}{Predicate expression to filter list elements before applying evaluated in the environment of list's element}
 
-\item{selector}{}
+\item{applicator}{Expression applied to each element of the list evaluated in the element's environment}
+
+\item{fallback}{Optional. If provided use this value as a fall back in case some variables (prefixed with dot) are not fount in the list's element environment. Otherwise (the default) those elements will be ignored and not included to results}
 }
 \value{
-List
+List of filtered with \code{extractor} elements with values returned by \code{applicator}. Unbound expressions are omitted (if \code{fallback} is not provided) so list might be shorter.
 }
 \description{
-List element is bound to \code{extractor} and \code{selector} enviroments so its named elements available as variables
+List element is bound to \code{extractor} and \code{applicator} environments so its named elements available as variables prefixed with dots
 }

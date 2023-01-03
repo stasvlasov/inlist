@@ -28,38 +28,70 @@
   The ~inlist~ package provides presumably more convinient version of 'apply' for lists with table like structure via its ~inlist~ function. Each list's element is bound to enviroments where filtering and selection is evaluated so its named elements are available as variables prefixed with ~.~. It also binds ~.~, ~..~, ~...~, ~.n~, ~.N~, ~..n~ and ~..N~ variables for accessing element itself, original list, elements indexing, length, etc.
 #+end_src
 
+inlist also binds ._() function which can be use to control partial substitution for specific sub expressions in case some variables are not bound for these sub expressions.
+
+
 ** Installation
 #+BEGIN_SRC R :noweb yes
-  devtools::install_github("stasvlasov/inlist")
+  devtools::install_github("<<github-repo()>>")
 #+END_SRC
 
 * R Code
 #+BEGIN_SRC R :tangle R/inlist.r
-  ##' Presumably more convinient version of 'apply' for lists with table like structure.
+  ##' Presumably more convenient version of 'apply' for lists with table like structure.
   ##'
-  ##' List element is bound to `extractor` and `selector` enviroments so its named elements available as variables
-  ##' @param l list
-  ##' @param extractor Predicate to filter list elements before applying.
-  ##' @param selector 
-  ##' @return List
+  ##' List element is bound to `extractor` and `applicator` environments so its named elements available as variables prefixed with dots
+  ##' 
+  ##' @param l list (or NULL)
+  ##' @param extractor Predicate expression to filter list elements before applying evaluated in the environment of list's element
+  ##' @param applicator Expression applied to each element of the list evaluated in the element's environment
+  ##' @param fallback Optional. If provided use this value as a fall back in case some variables (prefixed with dot) are not fount in the list's element environment. Otherwise (the default) those elements will be ignored and not included to results
+  ##' @return List of filtered with `extractor` elements with values returned by `applicator`. Unbound expressions are omitted (if `fallback` is not provided) so list might be shorter.
   ##' 
   ##' @export 
-  inlist <- function(l, extractor, selector) {
+  inlist <- function(l, extractor, applicator, fallback) {
+      if(!is.list(l) & !is.null(l)) stop("inlist -- argument `l` should be either list or NULL")
       sys_call <- as.list(sys.call())
       parent_frame <- parent.frame()
       ## eval in elements envir
-      .eval <- \(envir, index, expr, call, fallback, .l = l, n = index) {
+      .eval <- \(envir, index, expr, fallback, call, .l, n = index, previx_dots = TRUE) {
           ## `(` is identity function
           ## prepend dot to names
-          names(envir) <- ifelse(names(envir) != "", paste0(".", names(envir)), "")
+          if(length(envir) > 0 & previx_dots) {
+              names(envir) <- ifelse(names(envir) != "", paste0(".", names(envir)), "")
+          }
           envir <- c(envir, list(. = envir
                                , .. = .l
                                , .n = index
                                , .N = length(.l)
                                , ... = l
                                , ..n = n
-                               , ..N = length(l)))
+                               , ..N = length(l)
+                               , ._ = \(e, fb = NULL) {
+                                   .eval(envir, index, sys.call()[[2]], fb, call = `(`, .l, previx_dots = FALSE)
+                               }))
+          vars_skip <- NULL
+          if(grepl("[ +-<>=*^({[%!|&]\\._\\("
+                 , expr_txt <- deparse(expr))) {
+              expr_data <-
+                  parse(text = expr_txt) |>
+                  getParseData()
+              while(!is.na(i <- which(expr_data$text == "._")[1])) {
+                  expr_data <- expr_data[-(1:i),]
+                  expr_data <- expr_data[expr_data$token != "expr",]
+                  expr_data <- split(expr_data, cumsum(expr_data$parent == expr_data$parent[1]))
+                  if(length(expr_data) %in% c(2,3)) {
+                      ._first_arg <- expr_data[[1]][-1,]
+                      vars_skip <- c(vars_skip, ._first_arg[._first_arg$token == "SYMBOL", "text"])
+                      expr_data <- expr_data[[length(expr_data)]][-1,]
+                  } else {
+                      stop("inlist -- wrong number of arguments in ._() function")
+                  }
+              }
+          }
           vars <- all.vars(expr)
+          ## remove vars that are in ._
+          vars <- vars[!(vars %in% vars_skip)]
           ## find vars names that starts with .
           vars <- vars[substr(vars,0,1) == "."]
           vars_exist <- sapply(vars, \(v) eval(bquote(exists(.(v))), envir, parent_frame))
@@ -70,23 +102,126 @@
           }
       }
       ## apply with index
-      .apply <- \(.l, expr, call = `(`, fallback = NULL, simplify = FALSE, ..n = NULL) {
-          mapply(\(e, i, n) .eval(e, i, expr, call, fallback, .l, n)
+      .apply <- \(.l, expr, call = `(`, fall = if(missing(fallback)) NULL else fallback, ..n = NULL) {
+          mapply(\(e, i, n) .eval(e, i, expr, fall, call, .l, n)
                , e = .l
                , i = seq_along(.l)
                , n = if(is.null(..n)) seq_along(.l) else ..n
-               , SIMPLIFY = simplify)
+               , SIMPLIFY = FALSE)
       }
+      ## get call
       sys_call <- sys.call()
       ## filter
-      extractor <- sys_call[[3]]
-      extract_l <- .apply(l, extractor, call = isTRUE, fallback = FALSE, simplify = TRUE)
+      if(missing(extractor)) {
+          extract_l <- TRUE
+      } else {
+          extractor <- sys_call[[3]]
+          extract_l <- .apply(l, extractor, fall = FALSE, call = Negate(isFALSE)) |> unlist()
+      }
       ## map
-      selector <- sys_call[[4]]
-      select_l <- .apply(l[extract_l], selector, call = list, ..n = seq_along(l)[extract_l])
+      if(missing(applicatortor)) {
+          select_l <- l[extract_l]
+      } else {
+          applicator <- sys_call[[4]]
+          select_l <- .apply(l[extract_l], applicator, call = list, ..n = seq_along(l)[extract_l])
+      }
       ## return()
-      Filter(Negate(is.null), select_l) |>
-          lapply(unlist, recursive = FALSE)
+      if(missing(fallback)) {
+          select_l <- Filter(Negate(is.null), select_l)
+      }
+      return(lapply(unlist, recursive = FALSE))
   }
+
+#+END_SRC
+
+#+BEGIN_SRC R :tangle inst/tinytest/test_inlist.r
+  l <- list(
+      list(a = 1
+         , b = 1)
+    , list(a = 2
+         , b = 2
+         , c = 2)
+    , list(a = 3
+         , b = 3
+         , e = 3)
+    , list(a = 4
+         , b = 4
+         , e = 4
+         , d = 4
+         , f = 4)   
+  )
+
+
+
+
+  ## test placeholders
+  expect_equal(
+      inlist(l, .n == length(.), .b)
+    , list(3)
+  )
+
+
+  ## test filter
+  expect_equal(
+      inlist(l, .e, .a)
+    , list(3, 4)
+  )
+
+
+  expect_equal(
+      inlist(l, , .a)
+    , list(1, 2, 3, 4)
+  )
+
+
+  expect_equal(
+      inlist(l, , paste("Hello", .a, "world!"))
+    , list("Hello 1 world!", "Hello 2 world!", "Hello 3 world!", "Hello 4 world!")
+  )
+
+
+  expect_equal(
+      inlist(l, , paste("Hello", .e, "world!"))
+    , list("Hello 3 world!", "Hello 4 world!")
+  )
+
+
+  expect_equal(
+      inlist(l, , paste("Hello", .a, ._(.e + ._(.f, 10) , "brave"), "world!"))
+    , list("Hello 1 brave world!", "Hello 2 brave world!", "Hello 3 13 world!", 
+           "Hello 4 8 world!")
+  )
+
+
+
+  ## Check types
+  l <- NULL
+  expect_equal(
+      inlist(l, .n == length(.), .b)
+    , list()
+  )
+
+
+  l <- list()
+  expect_equal(
+      inlist(l, .n == length(.), .b)
+    , list()
+  )
+
+
+  l <- ""
+  expect_error(
+      inlist(l, .n == length(.), .b)
+  )
+
+  l <- 1
+  expect_error(
+      inlist(l, .n == length(.), .b)
+  )
+
+  l <- NA
+  expect_error(
+      inlist(l, .n == length(.), .b)
+  )
 
 #+END_SRC
