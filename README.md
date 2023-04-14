@@ -1,15 +1,8 @@
-```{=org}
-#+begin: md
-```
+
 [![R-CMD-check](https://github.com/stasvlasov/inlist/workflows/R-CMD-check/badge.svg)](https://github.com/stasvlasov/inlist/actions)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/stasvlasov/inlist)
 
-```{=org}
-#+end:
-```
-```{=org}
-#+results: package-description
-```
+
 The `inlist` package provides a convenient way to subset and apply an
 expression on lists with a table like structure (i.e. list of lists with
 similar keys values sturucture). Its main function
