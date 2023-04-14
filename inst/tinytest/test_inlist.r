@@ -1,28 +1,22 @@
-l <- list(
-    list(a = 1
-       , b = 1)
-  , list(a = 2
-       , b = 2
-       , c = 2)
-  , list(a = 3
-       , b = 3
-       , e = 3)
-  , list(a = 4
-       , b = 4
-       , e = 4
-       , d = 4
-       , f = 4)   
-)
-
-
-
+l <- list(list(a = 1
+             , b = 1)
+        , list(a = 2
+             , b = 2
+             , c = 2)
+        , list(a = 3
+             , b = 3
+             , e = 3)
+        , list(a = 4
+             , b = 4
+             , e = 4
+             , d = 4
+             , f = 4))
 
 ## test placeholders
 expect_equal(
     inlist(l, .n == length(.), .b)
   , list(3)
 )
-
 
 ## test filter
 expect_equal(

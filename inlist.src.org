@@ -7,6 +7,8 @@
 
 # - Reference from [[associate-id:org:j6vjf5c0mnj0][inList]] on [2022-11-26 Sat 17:26]
 
+#+call: get-org-file-key(key = "titlesd")
+
 * Description
 :PROPERTIES:
 :export_file_name: README.md
@@ -25,10 +27,94 @@
 
 #+name: package-description
 #+begin_src org :exports results :results replace :eval yes
-  The ~inlist~ package provides presumably more convinient version of 'apply' for lists with table like structure via its ~inlist~ function. Each list's element is bound to enviroments where filtering and selection is evaluated so its named elements are available as variables prefixed with ~.~. It also binds ~.~, ~..~, ~...~, ~.n~, ~.N~, ~..n~ and ~..N~ variables for accessing element itself, original list, elements indexing, length, etc.
+  The ~inlist~ package provides a convenient way to subset and apply an expression on lists with a table like structure (i.e. list of lists with similar keys values sturucture). Its main function ~inlist(your_list, i, j)~ filters ~your_list~ by ~i~ and applies ~j~. For those familiar with ~data.table~ the ~inlist~'s interface is similar to ~data.table~'s ~`[`~ extractor method (i.e., ~data.table:::`[.data.table`(dt, i ,j)~ means subset ~dt~ using ~i~ and manipulate with ~j~). Each list's element is bound to environment where filtering (~i~) and selection (~j~) is evaluated However, unlike ~data.table~'s ~i~ and ~j~ list's named elements in ~inlist~ are bound to variables that are prefixed with ~.~. It also binds special variables ~.~, ~..~, ~...~, ~.n~, ~.N~, ~..n~ and ~..N~ variables for accessing the list element itself, the original list, elements' index, length of the list, etc. as well as a special function ~._()~ which can be used to subsitute default values when some list's elemenst are not available.
 #+end_src
 
-inlist also binds ._() function which can be use to control partial substitution for specific sub expressions in case some variables are not bound for these sub expressions.
+** Usage
+
+#+BEGIN_SRC R :exports code
+  l <- list(list(a = 1
+               , b = 1)
+          , list(a = 2
+               , b = 2
+               , c = 2)
+          , list(a = 3
+               , b = 3
+               , e = 3)
+          , list(a = 4
+               , b = 4
+               , e = 4
+               , d = 4
+               , f = 4))
+
+
+  inlist(l, .n == length(.), .b)
+
+  # [[1]]
+  # [1] 3
+
+  inlist(l, .e, .a)
+
+  # [[1]]
+  # [1] 3
+  # 
+  # [[2]]
+  # [1] 4
+
+  inlist(l, , .a)
+
+  # [[1]]
+  # [1] 1
+  # 
+  # [[2]]
+  # [1] 2
+  # 
+  # [[3]]
+  # [1] 3
+  # 
+  # [[4]]
+  # [1] 4
+
+  inlist(l, , paste("Hello", .a, "world!"))
+
+  # [[1]]
+  # [1] "Hello 1 world!"
+  # 
+  # [[2]]
+  # [1] "Hello 2 world!"
+  # 
+  # [[3]]
+  # [1] "Hello 3 world!"
+  # 
+  # [[4]]
+  # [1] "Hello 4 world!"
+
+  inlist(l, , paste("Hello", .e, "world!"))
+
+  # [[1]]
+  # [1] "Hello 3 world!"
+  # 
+  # [[2]]
+  # [1] "Hello 4 world!"
+
+  inlist(l, , paste("Hello", .a, ._(.e + ._(.f, 10) , "brave"), "world!"))
+
+  # [[1]]
+  # [1] "Hello 1 brave world!"
+  # 
+  # [[2]]
+  # [1] "Hello 2 brave world!"
+  # 
+  # [[3]]
+  # [1] "Hello 3 13 world!"
+  # 
+  # [[4]]
+  # [1] "Hello 4 8 world!"
+
+
+
+
+#+END_SRC
 
 
 ** Installation
@@ -38,23 +124,39 @@ inlist also binds ._() function which can be use to control partial substitution
 
 * R Code
 #+BEGIN_SRC R :tangle R/inlist.r
-  ##' Presumably more convenient version of 'apply' for lists with table like structure.
+  ##' Select and apply expression to elements of table like lists.
   ##'
-  ##' List element is bound to `extractor` and `applicator` environments so its named elements available as variables prefixed with dots
+  ##' Each list element is attached to both `extractor` and `applicator` environment so its own named elements are available as variables prefixed with "." (dot character).
+  ##'
+  ##' - `.` - current list's element
+  ##' - `..` - (filtered) list (in `extractor` environment it is the same as initial list)
+  ##' - `.n` - (filtered) list element's index
+  ##' - `.N` - (filtered) list's length
+  ##' - `...` - initial list (`l`) 
+  ##' - `..n` - initial list element's index
+  ##' - `..N` - initial list's length
+  ##' - `._(x, fb)` - function that returns the fallback `fb` if some of the variables in `x` are unbound (i.e., due to non existing list elements)
   ##' 
   ##' @param l list (or NULL)
   ##' @param extractor Predicate expression to filter list elements before applying evaluated in the environment of list's element
   ##' @param applicator Expression applied to each element of the list evaluated in the element's environment
   ##' @param fallback Optional. If provided use this value as a fall back in case some variables (prefixed with dot) are not fount in the list's element environment. Otherwise (the default) those elements will be ignored and not included to results
+  ##' 
   ##' @return List of filtered with `extractor` elements with values returned by `applicator`. Unbound expressions are omitted (if `fallback` is not provided) so list might be shorter.
   ##' 
   ##' @export 
   inlist <- function(l, extractor, applicator, fallback) {
       if(!is.list(l) & !is.null(l)) stop("inlist -- argument `l` should be either list or NULL")
+      if(missing(fallback)) {
+          fallback_void <- TRUE
+          fallback <- NULL
+      } else {
+          fallback_void <- FALSE
+      }
       sys_call <- as.list(sys.call())
       parent_frame <- parent.frame()
       ## eval in elements envir
-      .eval <- \(envir, index, expr, fallback, call, .l, n = index, previx_dots = TRUE) {
+      .eval <- function(envir, index, expr, fallback, call, .l, n = index, previx_dots = TRUE) {
           ## `(` is identity function
           ## prepend dot to names
           if(length(envir) > 0 & previx_dots) {
@@ -67,12 +169,17 @@ inlist also binds ._() function which can be use to control partial substitution
                                , ... = l
                                , ..n = n
                                , ..N = length(l)
-                               , ._ = \(e, fb = NULL) {
-                                   .eval(envir, index, sys.call()[[2]], fb, call = `(`, .l, previx_dots = FALSE)
+                               , ._ = \(x, fb = NULL) {
+                                   .eval(envir
+                                       , index
+                                       , sys.call()[[2]] # x
+                                       , fb
+                                       , call = `(`, .l
+                                       , previx_dots = FALSE)
                                }))
           vars_skip <- NULL
           if(grepl("[ +-<>=*^({[%!|&]\\._\\("
-                 , expr_txt <- deparse(expr))) {
+                 , expr_txt <- deparse1(expr))) {
               expr_data <-
                   parse(text = expr_txt) |>
                   getParseData()
@@ -102,8 +209,9 @@ inlist also binds ._() function which can be use to control partial substitution
           }
       }
       ## apply with index
-      .apply <- \(.l, expr, call = `(`, fall = if(missing(fallback)) NULL else fallback, ..n = NULL) {
-          mapply(\(e, i, n) .eval(e, i, expr, fall, call, .l, n)
+      .apply <- function(.l, expr, call = `(`, fall = fallback, ..n = NULL) {
+          mapply(
+              \(e, i, n) .eval(e, i, expr, fall, call, .l, n)
                , e = .l
                , i = seq_along(.l)
                , n = if(is.null(..n)) seq_along(.l) else ..n
@@ -119,47 +227,41 @@ inlist also binds ._() function which can be use to control partial substitution
           extract_l <- .apply(l, extractor, fall = FALSE, call = Negate(isFALSE)) |> unlist()
       }
       ## map
-      if(missing(applicatortor)) {
-          select_l <- l[extract_l]
+      if(missing(applicator)) {
+          apply_l <- l[extract_l]
       } else {
           applicator <- sys_call[[4]]
-          select_l <- .apply(l[extract_l], applicator, call = list, ..n = seq_along(l)[extract_l])
+          apply_l <- .apply(l[extract_l], applicator, call = list, ..n = seq_along(l)[extract_l])
       }
       ## return()
-      if(missing(fallback)) {
-          select_l <- Filter(Negate(is.null), select_l)
+      if(fallback_void) {
+          apply_l <- Filter(Negate(is.null), apply_l)
       }
-      return(lapply(unlist, recursive = FALSE))
+      return(lapply(apply_l, unlist, recursive = FALSE))
   }
 
 #+END_SRC
 
 #+BEGIN_SRC R :tangle inst/tinytest/test_inlist.r
-  l <- list(
-      list(a = 1
-         , b = 1)
-    , list(a = 2
-         , b = 2
-         , c = 2)
-    , list(a = 3
-         , b = 3
-         , e = 3)
-    , list(a = 4
-         , b = 4
-         , e = 4
-         , d = 4
-         , f = 4)   
-  )
-
-
-
+  l <- list(list(a = 1
+               , b = 1)
+          , list(a = 2
+               , b = 2
+               , c = 2)
+          , list(a = 3
+               , b = 3
+               , e = 3)
+          , list(a = 4
+               , b = 4
+               , e = 4
+               , d = 4
+               , f = 4))
 
   ## test placeholders
   expect_equal(
       inlist(l, .n == length(.), .b)
     , list(3)
   )
-
 
   ## test filter
   expect_equal(

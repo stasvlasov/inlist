@@ -2,7 +2,7 @@
 % Please edit documentation in R/inlist.r
 \name{inlist}
 \alias{inlist}
-\title{Presumably more convenient version of 'apply' for lists with table like structure.}
+\title{Select and apply expression to elements of table like lists.}
 \usage{
 inlist(l, extractor, applicator, fallback)
 }
@@ -19,5 +19,17 @@ inlist(l, extractor, applicator, fallback)
 List of filtered with \code{extractor} elements with values returned by \code{applicator}. Unbound expressions are omitted (if \code{fallback} is not provided) so list might be shorter.
 }
 \description{
-List element is bound to \code{extractor} and \code{applicator} environments so its named elements available as variables prefixed with dots
+Each list element is attached to both \code{extractor} and \code{applicator} environment so its own named elements are available as variables prefixed with "." (dot character).
+}
+\details{
+\itemize{
+\item \code{.} - current list's element
+\item \code{..} - (filtered) list (in \code{extractor} environment it is the same as initial list)
+\item \code{.n} - (filtered) list element's index
+\item \code{.N} - (filtered) list's length
+\item \code{...} - initial list (\code{l})
+\item \code{..n} - initial list element's index
+\item \code{..N} - initial list's length
+\item \code{._(x, fb)} - function that returns the fallback \code{fb} if some of the variables in \code{x} are unbound (i.e., due to non existing list elements)
+}
 }

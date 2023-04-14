@@ -1,20 +1,36 @@
-##' Presumably more convenient version of 'apply' for lists with table like structure.
+##' Select and apply expression to elements of table like lists.
 ##'
-##' List element is bound to `extractor` and `applicator` environments so its named elements available as variables prefixed with dots
+##' Each list element is attached to both `extractor` and `applicator` environment so its own named elements are available as variables prefixed with "." (dot character).
+##'
+##' - `.` - current list's element
+##' - `..` - (filtered) list (in `extractor` environment it is the same as initial list)
+##' - `.n` - (filtered) list element's index
+##' - `.N` - (filtered) list's length
+##' - `...` - initial list (`l`) 
+##' - `..n` - initial list element's index
+##' - `..N` - initial list's length
+##' - `._(x, fb)` - function that returns the fallback `fb` if some of the variables in `x` are unbound (i.e., due to non existing list elements)
 ##' 
 ##' @param l list (or NULL)
 ##' @param extractor Predicate expression to filter list elements before applying evaluated in the environment of list's element
 ##' @param applicator Expression applied to each element of the list evaluated in the element's environment
 ##' @param fallback Optional. If provided use this value as a fall back in case some variables (prefixed with dot) are not fount in the list's element environment. Otherwise (the default) those elements will be ignored and not included to results
+##' 
 ##' @return List of filtered with `extractor` elements with values returned by `applicator`. Unbound expressions are omitted (if `fallback` is not provided) so list might be shorter.
 ##' 
 ##' @export 
 inlist <- function(l, extractor, applicator, fallback) {
     if(!is.list(l) & !is.null(l)) stop("inlist -- argument `l` should be either list or NULL")
+    if(missing(fallback)) {
+        fallback_void <- TRUE
+        fallback <- NULL
+    } else {
+        fallback_void <- FALSE
+    }
     sys_call <- as.list(sys.call())
     parent_frame <- parent.frame()
     ## eval in elements envir
-    .eval <- \(envir, index, expr, fallback, call, .l, n = index, previx_dots = TRUE) {
+    .eval <- function(envir, index, expr, fallback, call, .l, n = index, previx_dots = TRUE) {
         ## `(` is identity function
         ## prepend dot to names
         if(length(envir) > 0 & previx_dots) {
@@ -27,12 +43,17 @@ inlist <- function(l, extractor, applicator, fallback) {
                              , ... = l
                              , ..n = n
                              , ..N = length(l)
-                             , ._ = \(e, fb = NULL) {
-                                 .eval(envir, index, sys.call()[[2]], fb, call = `(`, .l, previx_dots = FALSE)
+                             , ._ = \(x, fb = NULL) {
+                                 .eval(envir
+                                     , index
+                                     , sys.call()[[2]] # x
+                                     , fb
+                                     , call = `(`, .l
+                                     , previx_dots = FALSE)
                              }))
         vars_skip <- NULL
         if(grepl("[ +-<>=*^({[%!|&]\\._\\("
-               , expr_txt <- deparse(expr))) {
+               , expr_txt <- deparse1(expr))) {
             expr_data <-
                 parse(text = expr_txt) |>
                 getParseData()
@@ -62,8 +83,9 @@ inlist <- function(l, extractor, applicator, fallback) {
         }
     }
     ## apply with index
-    .apply <- \(.l, expr, call = `(`, fall = if(missing(fallback)) NULL else fallback, ..n = NULL) {
-        mapply(\(e, i, n) .eval(e, i, expr, fall, call, .l, n)
+    .apply <- function(.l, expr, call = `(`, fall = fallback, ..n = NULL) {
+        mapply(
+            \(e, i, n) .eval(e, i, expr, fall, call, .l, n)
              , e = .l
              , i = seq_along(.l)
              , n = if(is.null(..n)) seq_along(.l) else ..n
@@ -79,15 +101,15 @@ inlist <- function(l, extractor, applicator, fallback) {
         extract_l <- .apply(l, extractor, fall = FALSE, call = Negate(isFALSE)) |> unlist()
     }
     ## map
-    if(missing(applicatortor)) {
-        select_l <- l[extract_l]
+    if(missing(applicator)) {
+        apply_l <- l[extract_l]
     } else {
         applicator <- sys_call[[4]]
-        select_l <- .apply(l[extract_l], applicator, call = list, ..n = seq_along(l)[extract_l])
+        apply_l <- .apply(l[extract_l], applicator, call = list, ..n = seq_along(l)[extract_l])
     }
     ## return()
-    if(missing(fallback)) {
-        select_l <- Filter(Negate(is.null), select_l)
+    if(fallback_void) {
+        apply_l <- Filter(Negate(is.null), apply_l)
     }
-    return(lapply(unlist, recursive = FALSE))
+    return(lapply(apply_l, unlist, recursive = FALSE))
 }
