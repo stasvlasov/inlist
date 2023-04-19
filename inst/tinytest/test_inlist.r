@@ -44,9 +44,21 @@ expect_equal(
 
 
 expect_equal(
+    inlist(l, , ._(paste("f is", .f), "f does not exist"))
+  , list("f does not exist"
+       , "f does not exist"
+       , "f does not exist"
+       , "f is 4")
+)
+
+
+
+expect_equal(
     inlist(l, , paste("Hello", .a, ._(.e + ._(.f, 10) , "brave"), "world!"))
-  , list("Hello 1 brave world!", "Hello 2 brave world!", "Hello 3 13 world!", 
-         "Hello 4 8 world!")
+  , list("Hello 1 brave world!"
+       , "Hello 2 brave world!"
+       , "Hello 3 13 world!"
+       , "Hello 4 8 world!")
 )
 
 

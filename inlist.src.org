@@ -1,13 +1,11 @@
 #+title: inlist
 #+author: Stas Vlasov
 #+email: s.vlasov@uvt.nl
-#+r_package_version: 0.0.0.9000
-#+r_package_url: https://github.com/stasvlasov/inlist
-#+r_package_bug_reports: https://github.com/stasvlasov/inlist/issues
+#+r-pkg-version: 0.0.0.9000
+#+r-pkg-url: https://github.com/stasvlasov/inlist
+#+r-pkg-bug-reports: https://github.com/stasvlasov/inlist/issues
 
 # - Reference from [[associate-id:org:j6vjf5c0mnj0][inList]] on [2022-11-26 Sat 17:26]
-
-#+call: get-org-file-key(key = "titlesd")
 
 * Description
 :PROPERTIES:
@@ -25,13 +23,18 @@
 #+end_export
 #+end
 
-#+name: package-description
+#+name: r-pkg-description
 #+begin_src org :exports results :results replace :eval yes
   The ~inlist~ package provides a convenient way to subset and apply an expression on lists with a table like structure (i.e. list of lists with similar keys values sturucture). Its main function ~inlist(your_list, i, j)~ filters ~your_list~ by ~i~ and applies ~j~. For those familiar with ~data.table~ the ~inlist~'s interface is similar to ~data.table~'s ~`[`~ extractor method (i.e., ~data.table:::`[.data.table`(dt, i ,j)~ means subset ~dt~ using ~i~ and manipulate with ~j~). Each list's element is bound to environment where filtering (~i~) and selection (~j~) is evaluated However, unlike ~data.table~'s ~i~ and ~j~ list's named elements in ~inlist~ are bound to variables that are prefixed with ~.~. It also binds special variables ~.~, ~..~, ~...~, ~.n~, ~.N~, ~..n~ and ~..N~ variables for accessing the list element itself, the original list, elements' index, length of the list, etc. as well as a special function ~._()~ which can be used to subsitute default values when some list's elemenst are not available.
 #+end_src
 
-** Usage
+#+BEGIN_SRC R :session *ob-r-pkg-R-session*
+  ## Generate package description
+  ## --------------------------------------------------------------------------------
+  message("Hello!")
+#+END_SRC
 
+** Usage
 #+BEGIN_SRC R :exports code
   l <- list(list(a = 1
                , b = 1)
@@ -122,6 +125,15 @@
   devtools::install_github("<<github-repo()>>")
 #+END_SRC
 
+** Dependencies
+
+#+caption: Suggested packages
+#+name: ob-r-pkg-suggests
+| name     | version | comment                                |
+|----------+---------+----------------------------------------|
+| [[https://github.com/markvanderloo/tinytest/blob/master/pkg/README.md][tinytest]] |   1.0.0 | for package development (unit testing) |
+#+TBLFM: $>>='(org-sbe ob-r-pkg-utils-get-package-vesion (pkg $$1))
+
 * R Code
 #+BEGIN_SRC R :tangle R/inlist.r
   ##' Select and apply expression to elements of table like lists.
@@ -178,7 +190,8 @@
                                        , previx_dots = FALSE)
                                }))
           vars_skip <- NULL
-          if(grepl("[ +-<>=*^({[%!|&]\\._\\("
+          ## check if function was used and eval even if args are not bound
+          if(grepl("[ ,+-<>=*^({[%!|&]*\\._\\("
                  , expr_txt <- deparse1(expr))) {
               expr_data <-
                   parse(text = expr_txt) |>
@@ -187,6 +200,7 @@
                   expr_data <- expr_data[-(1:i),]
                   expr_data <- expr_data[expr_data$token != "expr",]
                   expr_data <- split(expr_data, cumsum(expr_data$parent == expr_data$parent[1]))
+                  ## if there are parent elements then there were arguments
                   if(length(expr_data) %in% c(2,3)) {
                       ._first_arg <- expr_data[[1]][-1,]
                       vars_skip <- c(vars_skip, ._first_arg[._first_arg$token == "SYMBOL", "text"])
@@ -289,11 +303,21 @@
 
 
   expect_equal(
-      inlist(l, , paste("Hello", .a, ._(.e + ._(.f, 10) , "brave"), "world!"))
-    , list("Hello 1 brave world!", "Hello 2 brave world!", "Hello 3 13 world!", 
-           "Hello 4 8 world!")
+      inlist(l, , ._(paste("f is", .f), "f does not exist"))
+    , list("f does not exist"
+         , "f does not exist"
+         , "f does not exist"
+         , "f is 4")
   )
 
+
+
+  expect_equal(
+      inlist(l, , paste("Hello", .a, ._(.e + ._(.f, 10) , "brave"), "world!"))
+    , list("Hello 1 brave world!"
+         , "Hello 2 brave world!"
+         , "Hello 3 13 world!"
+         , "Hello 4 8 world!"))
 
 
   ## Check types

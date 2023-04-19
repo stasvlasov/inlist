@@ -1,4 +1,3 @@
-
 [![R-CMD-check](https://github.com/stasvlasov/inlist/workflows/R-CMD-check/badge.svg)](https://github.com/stasvlasov/inlist/actions)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/stasvlasov/inlist)
 
@@ -18,6 +17,12 @@ to variables that are prefixed with `.`. It also binds special variables
 the list element itself, the original list, elements\' index, length of
 the list, etc. as well as a special function `._()` which can be used to
 subsitute default values when some list\'s elemenst are not available.
+
+``` {.r org-language="R"}
+## Generate package description
+## --------------------------------------------------------------------------------
+message("Hello!")
+```
 
 # Usage
 
@@ -106,3 +111,12 @@ inlist(l, , paste("Hello", .a, ._(.e + ._(.f, 10) , "brave"), "world!"))
 ``` {.r org-language="R"}
 devtools::install_github("stasvlasov/inlist")
 ```
+
+# Dependencies
+
+  : Suggested packages
+
+  name                                                                              version   comment
+  --------------------------------------------------------------------------------- --------- ----------------------------------------
+  [tinytest](https://github.com/markvanderloo/tinytest/blob/master/pkg/README.md)   1.0.0     for package development (unit testing)
+

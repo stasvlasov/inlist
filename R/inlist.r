@@ -52,7 +52,8 @@ inlist <- function(l, extractor, applicator, fallback) {
                                      , previx_dots = FALSE)
                              }))
         vars_skip <- NULL
-        if(grepl("[ +-<>=*^({[%!|&]\\._\\("
+        ## check if function was used and eval even if args are not bound
+        if(grepl("[ ,+-<>=*^({[%!|&]*\\._\\("
                , expr_txt <- deparse1(expr))) {
             expr_data <-
                 parse(text = expr_txt) |>
@@ -61,6 +62,7 @@ inlist <- function(l, extractor, applicator, fallback) {
                 expr_data <- expr_data[-(1:i),]
                 expr_data <- expr_data[expr_data$token != "expr",]
                 expr_data <- split(expr_data, cumsum(expr_data$parent == expr_data$parent[1]))
+                ## if there are parent elements then there were arguments
                 if(length(expr_data) %in% c(2,3)) {
                     ._first_arg <- expr_data[[1]][-1,]
                     vars_skip <- c(vars_skip, ._first_arg[._first_arg$token == "SYMBOL", "text"])
