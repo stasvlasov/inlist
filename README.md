@@ -18,12 +18,6 @@ the list element itself, the original list, elements\' index, length of
 the list, etc. as well as a special function `._()` which can be used to
 subsitute default values when some list\'s elemenst are not available.
 
-``` {.r org-language="R"}
-## Generate package description
-## --------------------------------------------------------------------------------
-message("Hello!")
-```
-
 # Usage
 
 ``` {.r org-language="R"}
