@@ -50,7 +50,8 @@ inlist <- function(l, extractor, applicator, fallback) {
                                      , fallback
                                      , `(`
                                      , .l
-                                     , n)
+                                     , n
+                                     , prefix_dots = FALSE)
                              }))
         vars_skip <- NULL
         ## check if function was used and eval even if args are not bound
@@ -73,14 +74,11 @@ inlist <- function(l, extractor, applicator, fallback) {
             }
         }
         vars <- all.vars(x)
-        print(vars)
         ## remove vars that are in ._
         vars <- vars[!(vars %in% vars_skip)]
         ## find vars names that starts with .
         vars <- vars[substr(vars,0,1) == "."]
-        print(envir)
         vars_exist <- sapply(vars, \(v) eval(bquote(exists(.(v))), envir, parent_frame))
-        print(vars_exist)
         if(all(vars_exist)) {
             do.call(wrapper, list(eval(x, envir, parent_frame)))
         } else {
