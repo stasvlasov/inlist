@@ -7,13 +7,14 @@ Authors@R:
 Description: The ~inlist~ package provides a convenient way to subset and
     apply an expression on lists with a table like structure (i.e. list of
     lists with similar keys values sturucture).
-License: MIT + file LICENSE
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
 URL: https://github.com/stasvlasov/inlist
 BugReports: https://github.com/stasvlasov/inlist/issues
 Imports: 
-    utils (>= 4.2.3)
+    utils
 Suggests: 
-    tinytest (>= 1.0.0)
+    tinytest
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3

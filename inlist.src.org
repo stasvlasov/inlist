@@ -127,14 +127,14 @@ Its main function ~inlist(your_list, i, j)~ filters ~your_list~ by ~i~ and appli
 #+name: ob-r-pkg-table-imports
 | name  | version |
 |-------+---------|
-| utils |   4.2.3 |
+| utils |         |
 #+TBLFM: $<<='(org-sbe ob-r-pkg-utils-get-package-vesion (pkg $$1))
 
 #+caption: Suggested packages
 #+name: ob-r-pkg-table-suggests
 | name     | version | comment                                |
 |----------+---------+----------------------------------------|
-| [[https://github.com/markvanderloo/tinytest/blob/master/pkg/README.md][tinytest]] |   1.0.0 | for package development (unit testing) |
+| [[https://github.com/markvanderloo/tinytest/blob/master/pkg/README.md][tinytest]] |         | for package development (unit testing) |
 #+TBLFM: $<<='(org-sbe ob-r-pkg-utils-get-package-vesion (pkg $$1))
 
 * R Code
