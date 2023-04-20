@@ -58,9 +58,7 @@ expect_equal(
   , list("Hello 1 brave world!"
        , "Hello 2 brave world!"
        , "Hello 3 13 world!"
-       , "Hello 4 8 world!")
-)
-
+       , "Hello 4 8 world!"))
 
 
 ## Check types

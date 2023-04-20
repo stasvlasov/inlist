@@ -1,29 +1,19 @@
 Package: inlist
 Title: inlist
 Version: 0.0.0.9000
-Date: 2023-04-19
+Date: 2023-04-20
 Authors@R: 
     person("Stas", "Vlasov", , "s.vlasov@uvt.nl", role = c("aut", "cre"))
 Description: The ~inlist~ package provides a convenient way to subset and
     apply an expression on lists with a table like structure (i.e. list of
-    lists with similar keys values sturucture). Its main function
-    ~inlist(your_list, i, j)~ filters ~your_list~ by ~i~ and applies ~j~.
-    For those familiar with ~data.table~ the ~inlist~'s interface is
-    similar to ~data.table~'s ~`[`~ extractor method (i.e.,
-    ~data.table:::`[.data.table`(dt, i ,j)~ means subset ~dt~ using ~i~
-    and manipulate with ~j~). Each list's element is bound to environment
-    where filtering (~i~) and selection (~j~) is evaluated However, unlike
-    ~data.table~'s ~i~ and ~j~ list's named elements in ~inlist~ are bound
-    to variables that are prefixed with ~.~. It also binds special
-    variables ~.~, ~..~, ~...~, ~.n~, ~.N~, ~..n~ and ~..N~ variables for
-    accessing the list element itself, the original list, elements' index,
-    length of the list, etc. as well as a special function ~._()~ which
-    can be used to subsitute default values when some list's elemenst are
-    not available.
+    lists with similar keys values sturucture).
 License: MIT + file LICENSE
 URL: https://github.com/stasvlasov/inlist
 BugReports: https://github.com/stasvlasov/inlist/issues
+Imports: 
+    utils (>= 4.2.3)
+Suggests: 
+    tinytest (>= 1.0.0)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.0
-Suggests: tinytest
+RoxygenNote: 7.2.3

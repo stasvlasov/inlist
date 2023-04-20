@@ -21,7 +21,7 @@
 ##' @export 
 inlist <- function(l, extractor, applicator, fallback) {
     if(!is.list(l) & !is.null(l)) stop("inlist -- argument `l` should be either list or NULL")
-    if(missing(fallback)) {
+    if(base::missing(fallback)) {
         fallback_void <- TRUE
         fallback <- NULL
     } else {
@@ -30,10 +30,10 @@ inlist <- function(l, extractor, applicator, fallback) {
     sys_call <- as.list(sys.call())
     parent_frame <- parent.frame()
     ## eval in elements envir
-    .eval <- function(envir, index, expr, fallback, call, .l, n = index, previx_dots = TRUE) {
+    .eval <- function(envir, index, x, fallback, wrapper, .l, n = index, prefix_dots = TRUE) {
         ## `(` is identity function
         ## prepend dot to names
-        if(length(envir) > 0 & previx_dots) {
+        if(length(envir) > 0 & prefix_dots) {
             names(envir) <- ifelse(names(envir) != "", paste0(".", names(envir)), "")
         }
         envir <- c(envir, list(. = envir
@@ -43,71 +43,72 @@ inlist <- function(l, extractor, applicator, fallback) {
                              , ... = l
                              , ..n = n
                              , ..N = length(l)
-                             , ._ = \(x, fb = NULL) {
+                             , ._ = \(x, fallback = NULL) {
                                  .eval(envir
                                      , index
-                                     , sys.call()[[2]] # x
-                                     , fb
-                                     , call = `(`, .l
-                                     , previx_dots = FALSE)
+                                     , as.list(sys.call())[[2]] # i.e., x
+                                     , fallback
+                                     , `(`
+                                     , .l
+                                     , n)
                              }))
         vars_skip <- NULL
         ## check if function was used and eval even if args are not bound
-        if(grepl("[ ,+-<>=*^({[%!|&]*\\._\\("
-               , expr_txt <- deparse1(expr))) {
-            expr_data <-
-                parse(text = expr_txt) |>
-                getParseData()
-            while(!is.na(i <- which(expr_data$text == "._")[1])) {
-                expr_data <- expr_data[-(1:i),]
-                expr_data <- expr_data[expr_data$token != "expr",]
-                expr_data <- split(expr_data, cumsum(expr_data$parent == expr_data$parent[1]))
+        if("._" %in% all.names(x)) {
+            x_data <-
+                parse(text = deparse1(x), keep.source = TRUE) |>
+                utils::getParseData()
+            while(!is.na(i <- which(x_data$text == "._")[1])) {
+                x_data <- x_data[-(1:i),]
+                x_data <- x_data[x_data$token != "expr",]
+                x_data <- split(x_data, cumsum(x_data$parent == x_data$parent[1]))
                 ## if there are parent elements then there were arguments
-                if(length(expr_data) %in% c(2,3)) {
-                    ._first_arg <- expr_data[[1]][-1,]
+                if(length(x_data) %in% c(2,3)) {
+                    ._first_arg <- x_data[[1]][-1,]
                     vars_skip <- c(vars_skip, ._first_arg[._first_arg$token == "SYMBOL", "text"])
-                    expr_data <- expr_data[[length(expr_data)]][-1,]
+                    x_data <- x_data[[length(x_data)]][-1,]
                 } else {
                     stop("inlist -- wrong number of arguments in ._() function")
                 }
             }
         }
-        vars <- all.vars(expr)
+        vars <- all.vars(x)
+        print(vars)
         ## remove vars that are in ._
         vars <- vars[!(vars %in% vars_skip)]
         ## find vars names that starts with .
         vars <- vars[substr(vars,0,1) == "."]
+        print(envir)
         vars_exist <- sapply(vars, \(v) eval(bquote(exists(.(v))), envir, parent_frame))
+        print(vars_exist)
         if(all(vars_exist)) {
-            do.call(call, list(eval(expr, envir, parent_frame)))
+            do.call(wrapper, list(eval(x, envir, parent_frame)))
         } else {
             return(fallback)
         }
     }
     ## apply with index
-    .apply <- function(.l, expr, call = `(`, fall = fallback, ..n = NULL) {
+    .apply <- function(.l, x, wrapper = `(`, fallback, ..n = NULL) {
         mapply(
-            \(e, i, n) .eval(e, i, expr, fall, call, .l, n)
-             , e = .l
-             , i = seq_along(.l)
-             , n = if(is.null(..n)) seq_along(.l) else ..n
-             , SIMPLIFY = FALSE)
+            \(e, i, n) .eval(e, i, x, fallback, wrapper, .l, n)
+          , e = .l
+          , i = seq_along(.l)
+          , n = if(is.null(..n)) seq_along(.l) else ..n
+          , SIMPLIFY = FALSE)
     }
-    ## get call
-    sys_call <- sys.call()
     ## filter
     if(missing(extractor)) {
         extract_l <- TRUE
     } else {
         extractor <- sys_call[[3]]
-        extract_l <- .apply(l, extractor, fall = FALSE, call = Negate(isFALSE)) |> unlist()
+        extract_l <- .apply(l, extractor, fallback = FALSE, wrapper = Negate(isFALSE)) |> unlist()
     }
     ## map
     if(missing(applicator)) {
         apply_l <- l[extract_l]
     } else {
         applicator <- sys_call[[4]]
-        apply_l <- .apply(l[extract_l], applicator, call = list, ..n = seq_along(l)[extract_l])
+        apply_l <- .apply(l[extract_l], applicator, fallback, wrapper = list, ..n = seq_along(l)[extract_l])
     }
     ## return()
     if(fallback_void) {
