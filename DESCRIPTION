@@ -7,8 +7,7 @@ Authors@R:
 Description: The ~inlist~ package provides a convenient way to subset and
     apply an expression on lists with a table like structure (i.e. list of
     lists with similar keys values sturucture).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+License: MIT + file LICENSE
 URL: https://github.com/stasvlasov/inlist
 BugReports: https://github.com/stasvlasov/inlist/issues
 Imports: 
