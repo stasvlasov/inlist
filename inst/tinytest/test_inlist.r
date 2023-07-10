@@ -43,6 +43,8 @@ expect_equal(
 )
 
 
+
+## substitutes
 expect_equal(
     inlist(l, , ._(paste("f is", .f), "f does not exist"))
   , list("f does not exist"
